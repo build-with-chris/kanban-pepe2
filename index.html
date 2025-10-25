@@ -1467,6 +1467,7 @@
             updateSyncStatus('syncing', 'Speichere Ziel...');
             
             try {
+                // Try with author field first
                 const { error } = await supabase
                     .from('shared_goals')
                     .insert({
@@ -1476,7 +1477,23 @@
                         completed: false
                     });
                 
-                if (error) throw error;
+                if (error) {
+                    // If author field doesn't exist, try without it
+                    if (error.message.includes('author') || error.message.includes('column')) {
+                        console.warn('Author column not found, saving without author field');
+                        const { error: fallbackError } = await supabase
+                            .from('shared_goals')
+                            .insert({
+                                workspace_id: SHARED_WORKSPACE_ID,
+                                text: goalText,
+                                completed: false
+                            });
+                        
+                        if (fallbackError) throw fallbackError;
+                    } else {
+                        throw error;
+                    }
+                }
                 
                 await loadWeekGoals();
                 updateSyncStatus('synced', 'Ziel gespeichert');
@@ -1500,14 +1517,36 @@
                     .eq('workspace_id', SHARED_WORKSPACE_ID)
                     .single();
                 
+                // Prepare update data
+                const updateData = { completed: !goal.completed };
+                
+                // Try to add completed_at field if it exists
+                if (!goal.completed) {
+                    updateData.completed_at = new Date().toISOString();
+                }
+                
                 // Toggle it
                 const { error } = await supabase
                     .from('shared_goals')
-                    .update({ completed: !goal.completed })
+                    .update(updateData)
                     .eq('id', goalId)
                     .eq('workspace_id', SHARED_WORKSPACE_ID);
                 
-                if (error) throw error;
+                if (error) {
+                    // If completed_at field doesn't exist, try without it
+                    if (error.message.includes('completed_at') || error.message.includes('column')) {
+                        console.warn('completed_at column not found, updating without it');
+                        const { error: fallbackError } = await supabase
+                            .from('shared_goals')
+                            .update({ completed: !goal.completed })
+                            .eq('id', goalId)
+                            .eq('workspace_id', SHARED_WORKSPACE_ID);
+                        
+                        if (fallbackError) throw fallbackError;
+                    } else {
+                        throw error;
+                    }
+                }
                 
                 await loadWeekGoals();
                 updateSyncStatus('synced', 'Aktualisiert');
@@ -2463,7 +2502,7 @@ Pepe-Dom Team`;
         
         function updateMobileTitle() {
             if (window.innerWidth <= 768) {
-                document.getElementById('mainTitle').textContent = '🎪 Teamarbeit Pepe Dome';
+                document.getElementById('mainTitle').textContent = '🎪 Teamarbeit Pepe-Dome';
             } else {
                 document.getElementById('mainTitle').textContent = '📋 Pepe-Dom - Kanban Board';
             }
