@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pepe-Dom - Kanban Board</title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="PepeDome Logo ausgeschnitten.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="PepeDome Logo ausgeschnitten.png">
+    <link rel="apple-touch-icon" href="PepeDome Logo ausgeschnitten.png">
+    
+    <!-- Mobile Web App Meta Tags -->
+    <meta name="application-name" content="Pepe-Dome Teamarbeit">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Pepe-Dome">
+    <meta name="description" content="Teamarbeit Kanban Board für Pepe-Dome">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#667eea">
+    
+    <!-- Manifest für PWA -->
+    <link rel="manifest" href="manifest.json">
+    
     <!-- Supabase Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
@@ -976,36 +993,37 @@
                     <label for="filter-hilfe"><span class="tag tag-hilfe">Hilfe</span></label>
                 </div>
                 <div class="filter-tag" data-tag="Orga">
-                    <input type="checkbox" id="filter-orga">
+                    <input type="checkbox" id="filter-orga" checked>
                     <label for="filter-orga"><span class="tag tag-orga">Orga</span></label>
                 </div>
                 <div class="filter-tag" data-tag="Marketing">
-                    <input type="checkbox" id="filter-marketing">
+                    <input type="checkbox" id="filter-marketing" checked>
                     <label for="filter-marketing"><span class="tag tag-marketing">Marketing</span></label>
                 </div>
                 <div class="filter-tag" data-tag="Shows">
-                    <input type="checkbox" id="filter-shows">
+                    <input type="checkbox" id="filter-shows" checked>
                     <label for="filter-shows"><span class="tag tag-shows">Shows</span></label>
                 </div>
                 <div class="filter-tag" data-tag="Training">
-                    <input type="checkbox" id="filter-training">
+                    <input type="checkbox" id="filter-training" checked>
                     <label for="filter-training"><span class="tag tag-training">Training</span></label>
                 </div>
                 <div class="filter-tag" data-tag="Workshops">
-                    <input type="checkbox" id="filter-workshops">
+                    <input type="checkbox" id="filter-workshops" checked>
                     <label for="filter-workshops"><span class="tag tag-workshops">Workshops</span></label>
                 </div>
             </div>
             <div class="filter-actions">
                 <button class="filter-btn" onclick="selectAllFilters()">Alle auswählen</button>
                 <button class="filter-btn secondary" onclick="clearAllFilters()">Alle abwählen</button>
-                <button class="filter-btn secondary" onclick="resetToDefaultFilters()">Standard (Hilfe)</button>
+                <button class="filter-btn secondary" onclick="resetToDefaultFilters()">Standard (Alle)</button>
             </div>
             
             <!-- Mobile Dropdown -->
             <div class="mobile-filter">
                 <select class="mobile-filter-select" id="mobileFilterSelect" onchange="handleMobileFilterChange()">
-                    <option value="hilfe">🏷️ Hilfe (Standard)</option>
+                    <option value="all">🏷️ Alle Teams (Standard)</option>
+                    <option value="hilfe">🏷️ Hilfe</option>
                     <option value="orga">🏷️ Orga</option>
                     <option value="marketing">🏷️ Marketing</option>
                     <option value="shows">🏷️ Shows</option>
@@ -1286,6 +1304,7 @@
         }
         
         async function handleRealtimeCardChange(payload) {
+            console.log('📱 Mobile Debug - Realtime card change received:', payload);
             updateSyncStatus('syncing', 'Aktualisiere...');
             await loadCards();
             updateSyncStatus('synced', 'Online - Live Sync');
@@ -1671,7 +1690,7 @@
         // TEAM FILTER
         // ========================================
         
-        let activeFilters = ['Hilfe']; // Standard: Hilfe ist aktiv
+        let activeFilters = ['Hilfe', 'Orga', 'Marketing', 'Shows', 'Training', 'Workshops']; // Standard: Alle Teams aktiv
         let allCards = []; // Alle Karten (unfiltered)
         
         function initializeFilters() {
@@ -1681,10 +1700,30 @@
                 activeFilters = JSON.parse(savedFilters);
             }
             
+            console.log('📱 Mobile Debug - Initializing filters:', activeFilters);
+            
             // Update UI
             updateFilterUI();
             applyFilters();
         }
+        
+        // Debug function to check mobile sync
+        function debugMobileSync() {
+            console.log('📱 Mobile Debug - Current state:');
+            console.log('- Active filters:', activeFilters);
+            console.log('- All cards:', allCards.length);
+            console.log('- Supabase connected:', !!supabase);
+            console.log('- Sync status:', document.getElementById('syncStatus').className);
+            
+            // Force reload cards
+            if (supabase) {
+                console.log('📱 Mobile Debug - Forcing card reload...');
+                loadCards();
+            }
+        }
+        
+        // Make debug function globally available
+        window.debugMobileSync = debugMobileSync;
         
         function updateFilterUI() {
             // Update checkboxes
@@ -1751,7 +1790,7 @@
         }
         
         function resetToDefaultFilters() {
-            activeFilters = ['Hilfe'];
+            activeFilters = ['Hilfe', 'Orga', 'Marketing', 'Shows', 'Training', 'Workshops'];
             localStorage.setItem('pepeTeamFilters', JSON.stringify(activeFilters));
             updateFilterUI();
             applyFilters();
@@ -1816,7 +1855,11 @@
         }
         
         function applyFilters() {
+            console.log('📱 Mobile Debug - Applying filters:', activeFilters);
+            console.log('📱 Mobile Debug - Total cards:', allCards.length);
+            
             if (activeFilters.length === 0) {
+                console.log('📱 Mobile Debug - No filters active, showing no cards');
                 // Show no cards when no filters are active
                 renderFilteredCards([]);
                 return;
@@ -1824,14 +1867,19 @@
             
             // Filter cards based on active filters
             const filteredCards = allCards.filter(card => {
+                // If card has no tags, show it (for backward compatibility)
                 if (!card.tags || card.tags.length === 0) {
-                    return false; // Hide cards without tags
+                    console.log('📱 Mobile Debug - Card without tags shown:', card.title);
+                    return true; // Show cards without tags
                 }
                 
                 // Check if card has any of the active filter tags
-                return card.tags.some(tag => activeFilters.includes(tag));
+                const hasMatchingTag = card.tags.some(tag => activeFilters.includes(tag));
+                console.log('📱 Mobile Debug - Card:', card.title, 'Tags:', card.tags, 'Matches:', hasMatchingTag);
+                return hasMatchingTag;
             });
             
+            console.log('📱 Mobile Debug - Filtered cards:', filteredCards.length);
             renderFilteredCards(filteredCards);
         }
         
@@ -1842,6 +1890,9 @@
         function renderCards(cards) {
             // Store all cards for filtering
             allCards = cards;
+            
+            console.log('📱 Mobile Debug - Cards loaded:', cards.length, 'cards');
+            console.log('📱 Mobile Debug - Active filters:', activeFilters);
             
             // Apply current filters
             applyFilters();
