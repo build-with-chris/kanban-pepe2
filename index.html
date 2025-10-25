@@ -390,18 +390,25 @@
         /* Mobile Touch Optimizations */
         @media (max-width: 768px) {
             .card {
-                touch-action: manipulation;
+                touch-action: none; /* Allow touch dragging */
                 user-select: none;
                 -webkit-user-select: none;
+                cursor: grab;
+            }
+            
+            .card:active {
+                cursor: grabbing;
+            }
+            
+            .card.dragging {
+                transform: rotate(5deg) scale(1.05);
+                box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+                z-index: 1000;
+                opacity: 0.9;
             }
             
             .card:hover {
                 transform: none; /* Disable hover effects on mobile */
-            }
-            
-            .card:active {
-                transform: scale(0.98);
-                transition: transform 0.1s;
             }
             
             .kanban-board {
@@ -410,6 +417,28 @@
             
             .column {
                 min-height: 300px;
+                position: relative;
+            }
+            
+            .column.drag-over {
+                background: #f0f9ff;
+                border: 2px dashed #3b82f6;
+                border-radius: 15px;
+            }
+            
+            .column.drag-over::before {
+                content: "📱 Hier ablegen";
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: #3b82f6;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 20px;
+                font-weight: 600;
+                z-index: 1001;
+                pointer-events: none;
             }
         }
 
@@ -1716,16 +1745,8 @@
                 cardDiv.addEventListener('dragend', handleDragEnd);
             }
             
-            // Mobile touch events
-            if (isMobile) {
-                cardDiv.addEventListener('click', (e) => {
-                    // Only trigger if not clicking on action buttons
-                    if (!e.target.closest('.card-actions')) {
-                        e.preventDefault();
-                        openCardExpanded(card.id);
-                    }
-                });
-            }
+            // Mobile touch events are handled globally in setupMobileCardInteractions()
+            // No need for individual card click handlers
             
             return cardDiv;
         }
@@ -2014,15 +2035,176 @@ Pepe-Dom Team`;
         
         // Mobile touch events
         function setupMobileCardInteractions() {
-            // Add touch event listeners to cards
-            document.addEventListener('click', (e) => {
+            let touchStartTime = 0;
+            let touchStartPos = { x: 0, y: 0 };
+            let isDragging = false;
+            let draggedCard = null;
+            
+            // Touch start
+            document.addEventListener('touchstart', (e) => {
+                if (window.innerWidth > 768) return; // Only on mobile
+                
                 const card = e.target.closest('.card');
-                if (card && window.innerWidth <= 768) {
+                if (!card) return;
+                
+                touchStartTime = Date.now();
+                touchStartPos = {
+                    x: e.touches[0].clientX,
+                    y: e.touches[0].clientY
+                };
+                
+                // Prevent default to avoid scrolling
+                e.preventDefault();
+            }, { passive: false });
+            
+            // Touch move
+            document.addEventListener('touchmove', (e) => {
+                if (window.innerWidth > 768) return; // Only on mobile
+                
+                const card = e.target.closest('.card');
+                if (!card) return;
+                
+                const touch = e.touches[0];
+                const deltaX = Math.abs(touch.clientX - touchStartPos.x);
+                const deltaY = Math.abs(touch.clientY - touchStartPos.y);
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                
+                // Start dragging if moved more than 10px
+                if (distance > 10 && !isDragging) {
+                    isDragging = true;
+                    draggedCard = card;
+                    card.classList.add('dragging');
+                    
+                    // Prevent default to avoid scrolling
                     e.preventDefault();
-                    const cardId = parseInt(card.dataset.cardId) || card.dataset.cardId;
-                    openCardExpanded(cardId);
+                }
+                
+                if (isDragging && draggedCard === card) {
+                    // Move card with finger
+                    const rect = card.getBoundingClientRect();
+                    const offsetX = touch.clientX - touchStartPos.x;
+                    const offsetY = touch.clientY - touchStartPos.y;
+                    
+                    card.style.transform = `translate(${offsetX}px, ${offsetY}px) rotate(5deg) scale(1.05)`;
+                    
+                    // Check which column we're over
+                    const columns = document.querySelectorAll('.column');
+                    let targetColumn = null;
+                    
+                    columns.forEach(column => {
+                        const columnRect = column.getBoundingClientRect();
+                        if (touch.clientX >= columnRect.left && 
+                            touch.clientX <= columnRect.right && 
+                            touch.clientY >= columnRect.top && 
+                            touch.clientY <= columnRect.bottom) {
+                            targetColumn = column;
+                        }
+                    });
+                    
+                    // Update visual feedback
+                    columns.forEach(column => {
+                        if (column === targetColumn) {
+                            column.classList.add('drag-over');
+                        } else {
+                            column.classList.remove('drag-over');
+                        }
+                    });
+                    
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            
+            // Touch end
+            document.addEventListener('touchend', (e) => {
+                if (window.innerWidth > 768) return; // Only on mobile
+                
+                const touchDuration = Date.now() - touchStartTime;
+                
+                if (isDragging && draggedCard) {
+                    // Find target column
+                    const columns = document.querySelectorAll('.column');
+                    let targetColumn = null;
+                    
+                    columns.forEach(column => {
+                        if (column.classList.contains('drag-over')) {
+                            targetColumn = column;
+                        }
+                    });
+                    
+                    if (targetColumn) {
+                        const newStatus = targetColumn.dataset.status;
+                        const cardId = parseInt(draggedCard.dataset.cardId) || draggedCard.dataset.cardId;
+                        
+                        // Move card to new status
+                        updateCardStatus(cardId, newStatus);
+                        
+                        // Show success feedback
+                        showMobileDragSuccess();
+                    }
+                    
+                    // Reset visual state
+                    draggedCard.classList.remove('dragging');
+                    draggedCard.style.transform = '';
+                    
+                    columns.forEach(column => {
+                        column.classList.remove('drag-over');
+                    });
+                    
+                    isDragging = false;
+                    draggedCard = null;
+                } else if (touchDuration < 200 && !isDragging) {
+                    // Short tap - open card details
+                    const card = e.target.closest('.card');
+                    if (card && !e.target.closest('.card-actions')) {
+                        const cardId = parseInt(card.dataset.cardId) || card.dataset.cardId;
+                        openCardExpanded(cardId);
+                    }
                 }
             });
+            
+            // Touch cancel
+            document.addEventListener('touchcancel', () => {
+                if (draggedCard) {
+                    draggedCard.classList.remove('dragging');
+                    draggedCard.style.transform = '';
+                    
+                    document.querySelectorAll('.column').forEach(column => {
+                        column.classList.remove('drag-over');
+                    });
+                    
+                    isDragging = false;
+                    draggedCard = null;
+                }
+            });
+        }
+        
+        function showMobileDragSuccess() {
+            // Create temporary success message
+            const successMsg = document.createElement('div');
+            successMsg.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: #10b981;
+                color: white;
+                padding: 15px 25px;
+                border-radius: 25px;
+                font-weight: 600;
+                z-index: 2000;
+                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            `;
+            successMsg.textContent = '🎉 Verschoben!';
+            document.body.appendChild(successMsg);
+            
+            // Remove after animation
+            setTimeout(() => {
+                successMsg.style.opacity = '0';
+                successMsg.style.transition = 'opacity 0.3s';
+                setTimeout(() => {
+                    document.body.removeChild(successMsg);
+                }, 300);
+            }, 1000);
         }
         
         // ========================================
