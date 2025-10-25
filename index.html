@@ -177,11 +177,103 @@
             background: white;
             border-radius: 15px;
             padding: 20px 30px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+
+        /* Team Filter */
+        .team-filter {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .team-filter h3 {
+            color: #764ba2;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .filter-tag {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .filter-tag:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .filter-tag.active {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .filter-tag input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .filter-tag label {
+            cursor: pointer;
+            font-weight: 500;
+            margin: 0;
+        }
+
+        .filter-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .filter-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .filter-btn:hover {
+            background: #5a6fd8;
+        }
+
+        .filter-btn.secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .filter-btn.secondary:hover {
+            background: #d1d5db;
+        }
+
+        .filter-status {
+            color: #6b7280;
+            font-size: 14px;
         }
 
         h1 {
@@ -588,6 +680,45 @@
             </div>
         </header>
 
+        <!-- Team Filter -->
+        <div class="team-filter">
+            <h3>
+                🏷️ Team Filter
+                <span class="filter-status" id="filterStatus">Alle Teams anzeigen</span>
+            </h3>
+            <div class="filter-tags">
+                <div class="filter-tag" data-tag="Hilfe">
+                    <input type="checkbox" id="filter-hilfe" checked>
+                    <label for="filter-hilfe"><span class="tag tag-hilfe">Hilfe</span></label>
+                </div>
+                <div class="filter-tag" data-tag="Orga">
+                    <input type="checkbox" id="filter-orga">
+                    <label for="filter-orga"><span class="tag tag-orga">Orga</span></label>
+                </div>
+                <div class="filter-tag" data-tag="Marketing">
+                    <input type="checkbox" id="filter-marketing">
+                    <label for="filter-marketing"><span class="tag tag-marketing">Marketing</span></label>
+                </div>
+                <div class="filter-tag" data-tag="Shows">
+                    <input type="checkbox" id="filter-shows">
+                    <label for="filter-shows"><span class="tag tag-shows">Shows</span></label>
+                </div>
+                <div class="filter-tag" data-tag="Training">
+                    <input type="checkbox" id="filter-training">
+                    <label for="filter-training"><span class="tag tag-training">Training</span></label>
+                </div>
+                <div class="filter-tag" data-tag="Workshops">
+                    <input type="checkbox" id="filter-workshops">
+                    <label for="filter-workshops"><span class="tag tag-workshops">Workshops</span></label>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="filter-btn" onclick="selectAllFilters()">Alle auswählen</button>
+                <button class="filter-btn secondary" onclick="clearAllFilters()">Alle abwählen</button>
+                <button class="filter-btn secondary" onclick="resetToDefaultFilters()">Standard (Hilfe)</button>
+            </div>
+        </div>
+
         <!-- Wochenziele -->
         <div class="week-goals">
             <h2>
@@ -762,9 +893,6 @@
                 return;
             }
             
-            console.log('🚀 Initialisiere Supabase mit URL:', SUPABASE_URL);
-            console.log('🔑 Anon Key:', SUPABASE_ANON_KEY.substring(0, 20) + '...');
-            
             try {
                 supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
                     auth: {
@@ -773,21 +901,15 @@
                     }
                 });
                 
-                console.log('✅ Supabase Client erstellt');
-                
                 // Test connection first
-                console.log('🔍 Teste Verbindung zur Datenbank...');
                 const { data, error } = await supabase
                     .from('shared_cards')
                     .select('count')
                     .limit(1);
                 
                 if (error) {
-                    console.error('❌ Datenbank-Verbindung fehlgeschlagen:', error);
                     throw error;
                 }
-                
-                console.log('✅ Datenbank-Verbindung erfolgreich');
                 
                 // Setup Realtime subscriptions für Live-Updates
                 setupRealtimeSubscriptions();
@@ -797,8 +919,7 @@
                 updateSyncStatus('synced', 'Online - Live Sync');
                 
             } catch (error) {
-                console.error('❌ Supabase init error:', error);
-                console.log('📦 Wechsle zu localStorage Fallback');
+                console.error('Supabase init error:', error);
                 useFallbackStorage();
             }
         }
@@ -1171,15 +1292,130 @@
         }
         
         // ========================================
+        // TEAM FILTER
+        // ========================================
+        
+        let activeFilters = ['Hilfe']; // Standard: Hilfe ist aktiv
+        let allCards = []; // Alle Karten (unfiltered)
+        
+        function initializeFilters() {
+            // Load saved filters from localStorage
+            const savedFilters = localStorage.getItem('pepeTeamFilters');
+            if (savedFilters) {
+                activeFilters = JSON.parse(savedFilters);
+            }
+            
+            // Update UI
+            updateFilterUI();
+            applyFilters();
+        }
+        
+        function updateFilterUI() {
+            // Update checkboxes
+            document.querySelectorAll('.filter-tag input[type="checkbox"]').forEach(checkbox => {
+                const tag = checkbox.closest('.filter-tag').dataset.tag;
+                checkbox.checked = activeFilters.includes(tag);
+                updateFilterTagStyle(checkbox.closest('.filter-tag'));
+            });
+            
+            // Update status text
+            updateFilterStatus();
+        }
+        
+        function updateFilterTagStyle(filterTag) {
+            const checkbox = filterTag.querySelector('input[type="checkbox"]');
+            if (checkbox.checked) {
+                filterTag.classList.add('active');
+            } else {
+                filterTag.classList.remove('active');
+            }
+        }
+        
+        function updateFilterStatus() {
+            const statusElement = document.getElementById('filterStatus');
+            if (activeFilters.length === 0) {
+                statusElement.textContent = 'Keine Teams ausgewählt';
+            } else if (activeFilters.length === 6) {
+                statusElement.textContent = 'Alle Teams anzeigen';
+            } else {
+                statusElement.textContent = `${activeFilters.length} Team(s) ausgewählt: ${activeFilters.join(', ')}`;
+            }
+        }
+        
+        function toggleFilter(tag) {
+            if (activeFilters.includes(tag)) {
+                activeFilters = activeFilters.filter(t => t !== tag);
+            } else {
+                activeFilters.push(tag);
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('pepeTeamFilters', JSON.stringify(activeFilters));
+            
+            // Update UI
+            updateFilterUI();
+            applyFilters();
+        }
+        
+        function selectAllFilters() {
+            activeFilters = ['Hilfe', 'Orga', 'Marketing', 'Shows', 'Training', 'Workshops'];
+            localStorage.setItem('pepeTeamFilters', JSON.stringify(activeFilters));
+            updateFilterUI();
+            applyFilters();
+        }
+        
+        function clearAllFilters() {
+            activeFilters = [];
+            localStorage.setItem('pepeTeamFilters', JSON.stringify(activeFilters));
+            updateFilterUI();
+            applyFilters();
+        }
+        
+        function resetToDefaultFilters() {
+            activeFilters = ['Hilfe'];
+            localStorage.setItem('pepeTeamFilters', JSON.stringify(activeFilters));
+            updateFilterUI();
+            applyFilters();
+        }
+        
+        function applyFilters() {
+            if (activeFilters.length === 0) {
+                // Show no cards when no filters are active
+                renderFilteredCards([]);
+                return;
+            }
+            
+            // Filter cards based on active filters
+            const filteredCards = allCards.filter(card => {
+                if (!card.tags || card.tags.length === 0) {
+                    return false; // Hide cards without tags
+                }
+                
+                // Check if card has any of the active filter tags
+                return card.tags.some(tag => activeFilters.includes(tag));
+            });
+            
+            renderFilteredCards(filteredCards);
+        }
+        
+        // ========================================
         // UI RENDERING
         // ========================================
         
         function renderCards(cards) {
+            // Store all cards for filtering
+            allCards = cards;
+            
+            // Apply current filters
+            applyFilters();
+        }
+        
+        function renderFilteredCards(filteredCards) {
             ['todo', 'progress', 'review', 'done'].forEach(status => {
                 const container = document.getElementById(`${status}-cards`);
                 container.innerHTML = '';
                 
-                const statusCards = cards.filter(card => card.status === status);
+                const statusCards = filteredCards.filter(card => card.status === status);
                 statusCards.forEach(card => {
                     const cardElement = createCardElement(card);
                     container.appendChild(cardElement);
@@ -1464,6 +1700,17 @@ Pepe-Dom Team`;
             // Event Listeners
             document.getElementById('cardForm').addEventListener('submit', handleCardSubmit);
             document.getElementById('emailForm').addEventListener('submit', sendEmail);
+            
+            // Filter Event Listeners
+            document.querySelectorAll('.filter-tag input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', (e) => {
+                    const tag = e.target.closest('.filter-tag').dataset.tag;
+                    toggleFilter(tag);
+                });
+            });
+            
+            // Initialize filters
+            initializeFilters();
             
             // Initialize Supabase or fallback
             initSupabase();
