@@ -734,7 +734,7 @@
         
         // WICHTIG: Ersetze diese Werte mit deinen eigenen Supabase-Credentials
         // Diese findest du in deinem Supabase-Dashboard unter Settings > API
-        const SUPABASE_URL = 'https://your-project.supabase.co';
+        const SUPABASE_URL = 'https://erviwtqmxaoczqewrffc.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVydml3dHFteGFvY3pxZXdyZmZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzNDc0MTcsImV4cCI6MjA3NjkyMzQxN30.atP2jU2rAmHoHh9AXnBBQZBxpj681lP5T3HMrdi21hc';
         
         // Anleitung:
@@ -762,6 +762,9 @@
                 return;
             }
             
+            console.log('🚀 Initialisiere Supabase mit URL:', SUPABASE_URL);
+            console.log('🔑 Anon Key:', SUPABASE_ANON_KEY.substring(0, 20) + '...');
+            
             try {
                 supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
                     auth: {
@@ -769,6 +772,22 @@
                         autoRefreshToken: false
                     }
                 });
+                
+                console.log('✅ Supabase Client erstellt');
+                
+                // Test connection first
+                console.log('🔍 Teste Verbindung zur Datenbank...');
+                const { data, error } = await supabase
+                    .from('shared_cards')
+                    .select('count')
+                    .limit(1);
+                
+                if (error) {
+                    console.error('❌ Datenbank-Verbindung fehlgeschlagen:', error);
+                    throw error;
+                }
+                
+                console.log('✅ Datenbank-Verbindung erfolgreich');
                 
                 // Setup Realtime subscriptions für Live-Updates
                 setupRealtimeSubscriptions();
@@ -778,7 +797,8 @@
                 updateSyncStatus('synced', 'Online - Live Sync');
                 
             } catch (error) {
-                console.error('Supabase init error:', error);
+                console.error('❌ Supabase init error:', error);
+                console.log('📦 Wechsle zu localStorage Fallback');
                 useFallbackStorage();
             }
         }
