@@ -1966,8 +1966,8 @@
             form.reset();
             
             if (cardId) {
-                const cards = supabase ? [] : localCards;
-                const card = cards.find(c => c.id === cardId) || localCards.find(c => c.id === cardId);
+                // Search in allCards (which contains all cards from database)
+                const card = allCards.find(c => c.id == cardId);
                 if (card) {
                     modalTitle.textContent = 'Karte bearbeiten';
                     document.getElementById('cardId').value = card.id;
@@ -1975,10 +1975,20 @@
                     document.getElementById('cardTitle').value = card.title;
                     document.getElementById('cardDescription').value = card.description || '';
                     
+                    // Clear all checkboxes first
+                    document.querySelectorAll('.tag-selector input[type="checkbox"]').forEach(checkbox => {
+                        checkbox.checked = false;
+                    });
+                    
+                    // Check the card's tags
                     (card.tags || []).forEach(tag => {
                         const checkbox = document.getElementById(`tag-${tag.toLowerCase()}`);
                         if (checkbox) checkbox.checked = true;
                     });
+                } else {
+                    console.error('Card not found:', cardId);
+                    modalTitle.textContent = 'Neue Karte erstellen';
+                    document.getElementById('cardStatus').value = status;
                 }
             } else {
                 modalTitle.textContent = 'Neue Karte erstellen';
@@ -2022,8 +2032,7 @@
         
         function openEmailModal(cardId) {
             const modal = document.getElementById('emailModal');
-            const cards = supabase ? [] : localCards;
-            const card = cards.find(c => c.id === cardId) || localCards.find(c => c.id === cardId);
+            const card = allCards.find(c => c.id == cardId);
             
             if (card) {
                 document.getElementById('emailCardId').value = cardId;
@@ -2087,8 +2096,7 @@ Pepe-Dom Team`;
         let expandedCardId = null;
         
         function openCardExpanded(cardId) {
-            const cards = supabase ? [] : allCards;
-            const card = cards.find(c => c.id === cardId) || allCards.find(c => c.id === cardId);
+            const card = allCards.find(c => c.id == cardId);
             
             if (!card) return;
             
@@ -2135,8 +2143,7 @@ Pepe-Dom Team`;
         function moveCardToNextStatus() {
             if (!expandedCardId) return;
             
-            const cards = supabase ? [] : allCards;
-            const card = cards.find(c => c.id === expandedCardId) || allCards.find(c => c.id === expandedCardId);
+            const card = allCards.find(c => c.id == expandedCardId);
             
             if (!card) return;
             
