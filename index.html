@@ -276,6 +276,168 @@
             font-size: 14px;
         }
 
+        /* Mobile Dropdown */
+        .mobile-filter {
+            display: none;
+        }
+
+        .mobile-filter-select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            background: white;
+            font-size: 16px;
+            color: #374151;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .mobile-filter-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .mobile-filter-select option {
+            padding: 10px;
+        }
+
+        /* Mobile Card Expansion */
+        .card-expanded {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .card-expanded-content {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            max-width: 400px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .card-expanded-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-expanded-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 10px;
+        }
+
+        .card-expanded-description {
+            color: #6b7280;
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+
+        .card-expanded-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .mobile-yes-button {
+            width: 100%;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .mobile-yes-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        }
+
+        .mobile-yes-button:active {
+            transform: translateY(0);
+        }
+
+        .close-expanded {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        /* Mobile Touch Optimizations */
+        @media (max-width: 768px) {
+            .card {
+                touch-action: manipulation;
+                user-select: none;
+                -webkit-user-select: none;
+            }
+            
+            .card:hover {
+                transform: none; /* Disable hover effects on mobile */
+            }
+            
+            .card:active {
+                transform: scale(0.98);
+                transition: transform 0.1s;
+            }
+            
+            .kanban-board {
+                gap: 15px;
+            }
+            
+            .column {
+                min-height: 300px;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .team-filter .filter-tags {
+                display: none;
+            }
+            
+            .team-filter .filter-actions {
+                display: none;
+            }
+            
+            .mobile-filter {
+                display: block;
+            }
+            
+            .team-filter h3 {
+                margin-bottom: 10px;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .mobile-filter {
+                display: none;
+            }
+        }
+
         h1 {
             color: #667eea;
             font-size: 2em;
@@ -717,6 +879,20 @@
                 <button class="filter-btn secondary" onclick="clearAllFilters()">Alle abwählen</button>
                 <button class="filter-btn secondary" onclick="resetToDefaultFilters()">Standard (Hilfe)</button>
             </div>
+            
+            <!-- Mobile Dropdown -->
+            <div class="mobile-filter">
+                <select class="mobile-filter-select" id="mobileFilterSelect" onchange="handleMobileFilterChange()">
+                    <option value="hilfe">🏷️ Hilfe (Standard)</option>
+                    <option value="orga">🏷️ Orga</option>
+                    <option value="marketing">🏷️ Marketing</option>
+                    <option value="shows">🏷️ Shows</option>
+                    <option value="training">🏷️ Training</option>
+                    <option value="workshops">🏷️ Workshops</option>
+                    <option value="all">🏷️ Alle Teams</option>
+                    <option value="none">🏷️ Keine Teams</option>
+                </select>
+            </div>
         </div>
 
         <!-- Wochenziele -->
@@ -822,6 +998,22 @@
                     <button type="submit" class="btn btn-primary">Speichern</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Mobile Card Expansion -->
+    <div class="card-expanded" id="cardExpanded" style="display: none;">
+        <div class="card-expanded-content">
+            <div class="card-expanded-header">
+                <h3 id="expandedCardTitle">Karte Details</h3>
+                <button class="close-expanded" onclick="closeCardExpanded()">&times;</button>
+            </div>
+            <div class="card-expanded-title" id="expandedCardTitleText"></div>
+            <div class="card-expanded-description" id="expandedCardDescription"></div>
+            <div class="card-expanded-tags" id="expandedCardTags"></div>
+            <button class="mobile-yes-button" id="mobileYesButton" onclick="moveCardToNextStatus()">
+                ✅ YES! Weiter zur nächsten Stufe
+            </button>
         </div>
     </div>
 
@@ -1318,6 +1510,9 @@
                 updateFilterTagStyle(checkbox.closest('.filter-tag'));
             });
             
+            // Update mobile dropdown
+            updateMobileDropdown();
+            
             // Update status text
             updateFilterStatus();
         }
@@ -1378,6 +1573,64 @@
             applyFilters();
         }
         
+        // Mobile Dropdown Functions
+        function handleMobileFilterChange() {
+            const select = document.getElementById('mobileFilterSelect');
+            const value = select.value;
+            
+            switch(value) {
+                case 'hilfe':
+                    activeFilters = ['Hilfe'];
+                    break;
+                case 'orga':
+                    activeFilters = ['Orga'];
+                    break;
+                case 'marketing':
+                    activeFilters = ['Marketing'];
+                    break;
+                case 'shows':
+                    activeFilters = ['Shows'];
+                    break;
+                case 'training':
+                    activeFilters = ['Training'];
+                    break;
+                case 'workshops':
+                    activeFilters = ['Workshops'];
+                    break;
+                case 'all':
+                    activeFilters = ['Hilfe', 'Orga', 'Marketing', 'Shows', 'Training', 'Workshops'];
+                    break;
+                case 'none':
+                    activeFilters = [];
+                    break;
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('pepeTeamFilters', JSON.stringify(activeFilters));
+            
+            // Update UI
+            updateFilterUI();
+            applyFilters();
+        }
+        
+        function updateMobileDropdown() {
+            const select = document.getElementById('mobileFilterSelect');
+            if (!select) return;
+            
+            // Determine current selection based on active filters
+            if (activeFilters.length === 0) {
+                select.value = 'none';
+            } else if (activeFilters.length === 6) {
+                select.value = 'all';
+            } else if (activeFilters.length === 1) {
+                const singleFilter = activeFilters[0].toLowerCase();
+                select.value = singleFilter;
+            } else {
+                // Multiple filters selected - show "all" as closest match
+                select.value = 'all';
+            }
+        }
+        
         function applyFilters() {
             if (activeFilters.length === 0) {
                 // Show no cards when no filters are active
@@ -1433,22 +1686,46 @@
                 `<span class="tag card-tag tag-${tag.toLowerCase()}">${tag}</span>`
             ).join('');
             
+            // Mobile vs Desktop actions
+            const isMobile = window.innerWidth <= 768;
+            const actionsHtml = isMobile ? 
+                // Mobile: Only show essential actions
+                `<div class="card-actions">
+                    <button class="card-btn" onclick="openCardModal('${card.status}', ${card.id})" title="Bearbeiten">✏️</button>
+                    <button class="card-btn" onclick="deleteCard(${card.id})" title="Löschen">🗑️</button>
+                </div>` :
+                // Desktop: Show all actions
+                `<div class="card-actions">
+                    <button class="card-btn" onclick="openEmailModal(${card.id})" title="Erinnerung senden">📧</button>
+                    <button class="card-btn" onclick="openCardModal('${card.status}', ${card.id})" title="Bearbeiten">✏️</button>
+                    <button class="card-btn" onclick="deleteCard(${card.id})" title="Löschen">🗑️</button>
+                </div>`;
+            
             cardDiv.innerHTML = `
                 <div class="card-title">${card.title}</div>
                 ${card.description ? `<div class="card-description">${card.description}</div>` : ''}
                 <div class="card-footer">
                     <div class="card-tags">${tagsHtml}</div>
-                    <div class="card-actions">
-                        <button class="card-btn" onclick="openEmailModal(${card.id})" title="Erinnerung senden">📧</button>
-                        <button class="card-btn" onclick="openCardModal('${card.status}', ${card.id})" title="Bearbeiten">✏️</button>
-                        <button class="card-btn" onclick="deleteCard(${card.id})" title="Löschen">🗑️</button>
-                    </div>
+                    ${actionsHtml}
                 </div>
             `;
             
-            // Drag events
-            cardDiv.addEventListener('dragstart', handleDragStart);
-            cardDiv.addEventListener('dragend', handleDragEnd);
+            // Drag events (only on desktop)
+            if (!isMobile) {
+                cardDiv.addEventListener('dragstart', handleDragStart);
+                cardDiv.addEventListener('dragend', handleDragEnd);
+            }
+            
+            // Mobile touch events
+            if (isMobile) {
+                cardDiv.addEventListener('click', (e) => {
+                    // Only trigger if not clicking on action buttons
+                    if (!e.target.closest('.card-actions')) {
+                        e.preventDefault();
+                        openCardExpanded(card.id);
+                    }
+                });
+            }
             
             return cardDiv;
         }
@@ -1636,6 +1913,119 @@ Pepe-Dom Team`;
         }
         
         // ========================================
+        // MOBILE CARD INTERACTIONS
+        // ========================================
+        
+        let expandedCardId = null;
+        
+        function openCardExpanded(cardId) {
+            const cards = supabase ? [] : allCards;
+            const card = cards.find(c => c.id === cardId) || allCards.find(c => c.id === cardId);
+            
+            if (!card) return;
+            
+            expandedCardId = cardId;
+            
+            // Update expanded card content
+            document.getElementById('expandedCardTitleText').textContent = card.title;
+            document.getElementById('expandedCardDescription').textContent = card.description || 'Keine Beschreibung';
+            
+            // Update tags
+            const tagsContainer = document.getElementById('expandedCardTags');
+            tagsContainer.innerHTML = '';
+            if (card.tags && card.tags.length > 0) {
+                card.tags.forEach(tag => {
+                    const tagElement = document.createElement('span');
+                    tagElement.className = `tag card-tag tag-${tag.toLowerCase()}`;
+                    tagElement.textContent = tag;
+                    tagsContainer.appendChild(tagElement);
+                });
+            } else {
+                tagsContainer.innerHTML = '<span style="color: #9ca3af;">Keine Tags</span>';
+            }
+            
+            // Update YES button text based on current status
+            const yesButton = document.getElementById('mobileYesButton');
+            const nextStatus = getNextStatus(card.status);
+            if (nextStatus) {
+                yesButton.textContent = `✅ YES! Weiter zu ${getStatusDisplayName(nextStatus)}`;
+                yesButton.style.display = 'block';
+            } else {
+                yesButton.textContent = '✅ Fertig!';
+                yesButton.style.display = 'block';
+            }
+            
+            // Show expanded card
+            document.getElementById('cardExpanded').style.display = 'flex';
+        }
+        
+        function closeCardExpanded() {
+            document.getElementById('cardExpanded').style.display = 'none';
+            expandedCardId = null;
+        }
+        
+        function moveCardToNextStatus() {
+            if (!expandedCardId) return;
+            
+            const cards = supabase ? [] : allCards;
+            const card = cards.find(c => c.id === expandedCardId) || allCards.find(c => c.id === expandedCardId);
+            
+            if (!card) return;
+            
+            const nextStatus = getNextStatus(card.status);
+            if (nextStatus) {
+                updateCardStatus(expandedCardId, nextStatus);
+                
+                // Show success feedback
+                const yesButton = document.getElementById('mobileYesButton');
+                const originalText = yesButton.textContent;
+                yesButton.textContent = '🎉 Verschoben!';
+                yesButton.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                
+                setTimeout(() => {
+                    yesButton.textContent = originalText;
+                    closeCardExpanded();
+                }, 1000);
+            } else {
+                // Card is already done
+                closeCardExpanded();
+            }
+        }
+        
+        function getNextStatus(currentStatus) {
+            const statusFlow = {
+                'todo': 'progress',
+                'progress': 'review',
+                'review': 'done',
+                'done': null
+            };
+            return statusFlow[currentStatus];
+        }
+        
+        function getStatusDisplayName(status) {
+            const statusNames = {
+                'todo': 'To Do',
+                'progress': 'In Progress',
+                'review': 'Review',
+                'done': 'Done'
+            };
+            return statusNames[status] || status;
+        }
+        
+        // Mobile touch events
+        function setupMobileCardInteractions() {
+            // Add touch event listeners to cards
+            document.addEventListener('click', (e) => {
+                const card = e.target.closest('.card');
+                if (card && window.innerWidth <= 768) {
+                    e.preventDefault();
+                    const cardId = parseInt(card.dataset.cardId) || card.dataset.cardId;
+                    openCardExpanded(cardId);
+                }
+            });
+        }
+        
+        // ========================================
         // DRAG AND DROP
         // ========================================
         
@@ -1696,6 +2086,7 @@ Pepe-Dom Team`;
         document.addEventListener('DOMContentLoaded', () => {
             showVisionScreen();
             setupDragAndDrop();
+            setupMobileCardInteractions();
             
             // Event Listeners
             document.getElementById('cardForm').addEventListener('submit', handleCardSubmit);
