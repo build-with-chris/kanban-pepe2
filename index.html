@@ -433,7 +433,7 @@
             }
             
             .column {
-                min-height: 300px;
+                min-height: 150px;
                 position: relative;
             }
             
@@ -640,7 +640,16 @@
             border-radius: 15px;
             padding: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            min-height: 400px;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .cards-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
         .column-header {
@@ -1190,7 +1199,7 @@
 
                 <div class="form-group">
                     <label for="emailSubject">Betreff</label>
-                    <input type="text" id="emailSubject" value="Erinnerung: Aufgabe im Pepe-Dom">
+                    <input type="text" id="emailSubject" value="Erinnerung: Aufgabe im Pepe-Dome">
                 </div>
 
                 <div class="form-group">
@@ -2161,7 +2170,7 @@ Status: ${getStatusName(card.status)}
 Bitte prüfen Sie den aktuellen Stand.
 
 Mit freundlichen Grüßen,
-Pepe-Dom Team`;
+Pepe-Dome Team`;
                 
                 document.getElementById('emailMessage').value = message;
                 
@@ -2555,7 +2564,7 @@ Pepe-Dom Team`;
             if (window.innerWidth <= 768) {
                 document.getElementById('mainTitle').textContent = '🎪 Teamarbeit Pepe-Dome';
             } else {
-                document.getElementById('mainTitle').textContent = '📋 Pepe-Dom - Kanban Board';
+                document.getElementById('mainTitle').textContent = '📋 Pepe-Dome - Kanban Board';
             }
         }
         
