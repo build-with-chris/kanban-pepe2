@@ -442,6 +442,18 @@
             }
         }
 
+        /* Mobile Header Optimizations */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.5em;
+                text-align: center;
+            }
+            
+            .info-badge {
+                display: none;
+            }
+        }
+
         /* Responsive Design */
         @media (max-width: 768px) {
             .team-filter .filter-tags {
@@ -532,6 +544,71 @@
 
         .add-goal-btn:hover {
             background: #5a6fd8;
+        }
+
+        /* Completed Goals */
+        .completed-goals {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .completed-goals h2 {
+            color: #10b981;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .toggle-completed-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .toggle-completed-btn:hover {
+            background: #059669;
+        }
+
+        .completed-goals-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .completed-goal-item {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .completed-goal-text {
+            color: #166534;
+            text-decoration: line-through;
+            opacity: 0.8;
+        }
+
+        .completed-goal-author {
+            color: #059669;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .completed-goal-date {
+            color: #6b7280;
+            font-size: 0.8em;
         }
 
         .kanban-board {
@@ -865,8 +942,8 @@
     <!-- Main App -->
     <div class="app-container" id="appContainer">
         <header>
-            <h1>📋 Pepe-Dom - Kanban Board</h1>
-            <div class="info-badge">
+            <h1 id="mainTitle">📋 Pepe-Dom - Kanban Board</h1>
+            <div class="info-badge" id="infoBadge">
                 🌍 Gemeinsames Board für Alle
             </div>
         </header>
@@ -932,6 +1009,17 @@
             </h2>
             <div class="week-goals-list" id="weekGoalsList">
                 <!-- Ziele werden hier dynamisch eingefügt -->
+            </div>
+        </div>
+
+        <!-- Abgeschlossene Ziele -->
+        <div class="completed-goals" id="completedGoalsSection" style="display: none;">
+            <h2>
+                ✅ Abgeschlossene Ziele
+                <button class="toggle-completed-btn" onclick="toggleCompletedGoals()">📋 Anzeigen</button>
+            </h2>
+            <div class="completed-goals-list" id="completedGoalsList">
+                <!-- Abgeschlossene Ziele werden hier angezeigt -->
             </div>
         </div>
 
@@ -1352,8 +1440,8 @@
             }
         }
         
-        async function saveWeekGoal(goalText) {
-            if (!supabase) return saveWeekGoalLocal(goalText);
+        async function saveWeekGoal(goalText, author = 'Unbekannt') {
+            if (!supabase) return saveWeekGoalLocal(goalText, author);
             
             updateSyncStatus('syncing', 'Speichere Ziel...');
             
@@ -1363,6 +1451,7 @@
                     .insert({
                         workspace_id: SHARED_WORKSPACE_ID,
                         text: goalText,
+                        author: author,
                         completed: false
                     });
                 
@@ -1372,7 +1461,7 @@
                 updateSyncStatus('synced', 'Ziel gespeichert');
             } catch (error) {
                 console.error('Error saving goal:', error);
-                saveWeekGoalLocal(goalText);
+                saveWeekGoalLocal(goalText, author);
             }
         }
         
@@ -1485,10 +1574,11 @@
             renderWeekGoals(localWeekGoals);
         }
         
-        function saveWeekGoalLocal(goalText) {
+        function saveWeekGoalLocal(goalText, author = 'Unbekannt') {
             const goal = {
                 id: Date.now(),
                 text: goalText,
+                author: author,
                 completed: false,
                 created_at: new Date().toISOString()
             };
@@ -1501,6 +1591,11 @@
             const goal = localWeekGoals.find(g => g.id === goalId);
             if (goal) {
                 goal.completed = !goal.completed;
+                if (goal.completed) {
+                    goal.completed_at = new Date().toISOString();
+                } else {
+                    delete goal.completed_at;
+                }
                 localStorage.setItem('pepeSharedGoals', JSON.stringify(localWeekGoals));
                 loadWeekGoalsLocal();
             }
@@ -1753,26 +1848,72 @@
         
         function renderWeekGoals(goals) {
             const container = document.getElementById('weekGoalsList');
+            const completedContainer = document.getElementById('completedGoalsList');
+            const completedSection = document.getElementById('completedGoalsSection');
+            
             container.innerHTML = '';
+            completedContainer.innerHTML = '';
             
             if (goals.length === 0) {
                 container.innerHTML = '<p style="color: #9ca3af;">Noch keine Wochenziele vorhanden</p>';
                 return;
             }
             
-            goals.forEach(goal => {
-                const goalElement = document.createElement('div');
-                goalElement.className = 'goal-item';
-                goalElement.innerHTML = `
-                    <input type="checkbox" ${goal.completed ? 'checked' : ''} 
-                           onchange="toggleGoal(${goal.id})">
-                    <span style="${goal.completed ? 'text-decoration: line-through; opacity: 0.6;' : ''}">
-                        ${goal.text}
-                    </span>
-                    <button class="card-btn" onclick="deleteGoal(${goal.id})" style="margin-left: auto;">🗑️</button>
-                `;
-                container.appendChild(goalElement);
-            });
+            const activeGoals = goals.filter(goal => !goal.completed);
+            const completedGoals = goals.filter(goal => goal.completed);
+            
+            // Render active goals
+            if (activeGoals.length === 0) {
+                container.innerHTML = '<p style="color: #9ca3af;">Alle Ziele abgeschlossen! 🎉</p>';
+            } else {
+                activeGoals.forEach(goal => {
+                    const goalElement = document.createElement('div');
+                    goalElement.className = 'goal-item';
+                    goalElement.innerHTML = `
+                        <input type="checkbox" onchange="toggleGoal(${goal.id})">
+                        <span>${goal.text}</span>
+                        <span style="color: #6b7280; font-size: 0.9em; margin-left: auto; margin-right: 10px;">
+                            von ${goal.author || 'Unbekannt'}
+                        </span>
+                        <button class="card-btn" onclick="deleteGoal(${goal.id})" style="margin-left: auto;">🗑️</button>
+                    `;
+                    container.appendChild(goalElement);
+                });
+            }
+            
+            // Render completed goals
+            if (completedGoals.length > 0) {
+                completedSection.style.display = 'block';
+                completedGoals.forEach(goal => {
+                    const goalElement = document.createElement('div');
+                    goalElement.className = 'completed-goal-item';
+                    goalElement.innerHTML = `
+                        <div>
+                            <div class="completed-goal-text">${goal.text}</div>
+                            <div class="completed-goal-author">von ${goal.author || 'Unbekannt'}</div>
+                        </div>
+                        <div class="completed-goal-date">
+                            ${new Date(goal.completed_at || goal.created_at).toLocaleDateString('de-DE')}
+                        </div>
+                    `;
+                    completedContainer.appendChild(goalElement);
+                });
+            } else {
+                completedSection.style.display = 'none';
+            }
+        }
+        
+        function toggleCompletedGoals() {
+            const completedSection = document.getElementById('completedGoalsSection');
+            const toggleBtn = document.querySelector('.toggle-completed-btn');
+            
+            if (completedSection.style.display === 'none') {
+                completedSection.style.display = 'block';
+                toggleBtn.textContent = '📋 Verstecken';
+            } else {
+                completedSection.style.display = 'none';
+                toggleBtn.textContent = '📋 Anzeigen';
+            }
         }
         
         // ========================================
@@ -1807,7 +1948,13 @@
         function addWeekGoal() {
             const goal = prompt('Neues Wochenziel eingeben:');
             if (goal && goal.trim()) {
-                saveWeekGoal(goal.trim());
+                // Ask for author name
+                const author = prompt('Wer hat dieses Ziel? (Name eingeben):');
+                if (author && author.trim()) {
+                    saveWeekGoal(goal.trim(), author.trim());
+                } else {
+                    saveWeekGoal(goal.trim(), 'Unbekannt');
+                }
             }
         }
         
@@ -2270,6 +2417,9 @@ Pepe-Dom Team`;
             setupDragAndDrop();
             setupMobileCardInteractions();
             
+            // Update mobile title
+            updateMobileTitle();
+            
             // Event Listeners
             document.getElementById('cardForm').addEventListener('submit', handleCardSubmit);
             document.getElementById('emailForm').addEventListener('submit', sendEmail);
@@ -2288,6 +2438,17 @@ Pepe-Dom Team`;
             // Initialize Supabase or fallback
             initSupabase();
         });
+        
+        function updateMobileTitle() {
+            if (window.innerWidth <= 768) {
+                document.getElementById('mainTitle').textContent = '🎪 Teamarbeit Pepe Dome';
+            } else {
+                document.getElementById('mainTitle').textContent = '📋 Pepe-Dom - Kanban Board';
+            }
+        }
+        
+        // Update title on window resize
+        window.addEventListener('resize', updateMobileTitle);
     </script>
 </body>
 </html>
