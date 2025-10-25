@@ -733,8 +733,15 @@
         // ========================================
         
         // WICHTIG: Ersetze diese Werte mit deinen eigenen Supabase-Credentials
+        // Diese findest du in deinem Supabase-Dashboard unter Settings > API
         const SUPABASE_URL = 'https://your-project.supabase.co';
-        const SUPABASE_ANON_KEY = 'your-anon-key-here';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVydml3dHFteGFvY3pxZXdyZmZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzNDc0MTcsImV4cCI6MjA3NjkyMzQxN30.atP2jU2rAmHoHh9AXnBBQZBxpj681lP5T3HMrdi21hc';
+        
+        // Anleitung:
+        // 1. Gehe zu https://supabase.com und erstelle ein neues Projekt
+        // 2. Führe die SQL-Befehle aus der Datei 'supabase-setup.sql' aus
+        // 3. Kopiere deine Project URL und anon key hierher
+        // 4. Alle Teammitglieder können dann die gleichen Daten sehen!
         
         // Shared workspace ID - alle nutzen den gleichen Workspace
         const SHARED_WORKSPACE_ID = 'pepe-dom-shared';
