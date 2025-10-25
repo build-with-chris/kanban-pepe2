@@ -811,6 +811,22 @@
             font-size: 14px;
         }
 
+        .form-group select {
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group select option {
+            padding: 8px;
+        }
+
         .form-group textarea {
             min-height: 100px;
             resize: vertical;
@@ -1145,8 +1161,13 @@
                 <input type="hidden" id="emailCardId">
                 
                 <div class="form-group">
-                    <label for="emailTo">Empfänger E-Mail *</label>
-                    <input type="email" id="emailTo" required placeholder="beispiel@email.de">
+                    <label for="emailTo">Empfänger *</label>
+                    <select id="emailTo" required>
+                        <option value="">Wählen Sie einen Empfänger...</option>
+                        <option value="info@pepearts.de">Michi - (info@pepearts.de)</option>
+                        <option value="info@pepeshows.de">Chris - (info@pepeshows.de)</option>
+                        <option value="hello@munich-circus-arts.de">Yuhui - (hello@munich-circus-arts.de)</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
@@ -1813,8 +1834,9 @@
             // Mobile vs Desktop actions
             const isMobile = window.innerWidth <= 768;
             const actionsHtml = isMobile ? 
-                // Mobile: Only show essential actions
+                // Mobile: Show all actions but with touch-friendly spacing
                 `<div class="card-actions">
+                    <button class="card-btn" onclick="openEmailModal(${card.id})" title="Erinnerung senden">📧</button>
                     <button class="card-btn" onclick="openCardModal('${card.status}', ${card.id})" title="Bearbeiten">✏️</button>
                     <button class="card-btn" onclick="deleteCard(${card.id})" title="Löschen">🗑️</button>
                 </div>` :
@@ -1840,8 +1862,8 @@
                 cardDiv.addEventListener('dragend', handleDragEnd);
             }
             
-            // Mobile touch events are handled globally in setupMobileCardInteractions()
-            // No need for individual card click handlers
+            // Add mobile touch events
+            addMobileTouchEvents(cardDiv);
             
             return cardDiv;
         }
@@ -2052,6 +2074,9 @@ Mit freundlichen Grüßen,
 Pepe-Dom Team`;
                 
                 document.getElementById('emailMessage').value = message;
+                
+                // Reset dropdown to first option
+                document.getElementById('emailTo').selectedIndex = 0;
             }
             
             modal.classList.add('active');
@@ -2068,6 +2093,11 @@ Pepe-Dom Team`;
             const to = document.getElementById('emailTo').value;
             const subject = document.getElementById('emailSubject').value;
             const message = document.getElementById('emailMessage').value;
+            
+            if (!to) {
+                alert('Bitte wählen Sie einen Empfänger aus.');
+                return;
+            }
             
             const mailtoLink = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
             window.location.href = mailtoLink;
@@ -2189,17 +2219,20 @@ Pepe-Dom Team`;
         
         // Mobile touch events
         function setupMobileCardInteractions() {
+            // This function is called once during initialization
+            // Individual card touch events are added in createCardElement()
+        }
+        
+        function addMobileTouchEvents(cardElement) {
+            if (window.innerWidth > 768) return; // Only on mobile
+            
             let touchStartTime = 0;
             let touchStartPos = { x: 0, y: 0 };
             let isDragging = false;
-            let draggedCard = null;
             
-            // Touch start
-            document.addEventListener('touchstart', (e) => {
-                if (window.innerWidth > 768) return; // Only on mobile
-                
-                const card = e.target.closest('.card');
-                if (!card) return;
+            cardElement.addEventListener('touchstart', (e) => {
+                // Don't start drag if touching action buttons
+                if (e.target.closest('.card-actions')) return;
                 
                 touchStartTime = Date.now();
                 touchStartPos = {
@@ -2207,17 +2240,10 @@ Pepe-Dom Team`;
                     y: e.touches[0].clientY
                 };
                 
-                // Prevent default to avoid scrolling
                 e.preventDefault();
             }, { passive: false });
             
-            // Touch move
-            document.addEventListener('touchmove', (e) => {
-                if (window.innerWidth > 768) return; // Only on mobile
-                
-                const card = e.target.closest('.card');
-                if (!card) return;
-                
+            cardElement.addEventListener('touchmove', (e) => {
                 const touch = e.touches[0];
                 const deltaX = Math.abs(touch.clientX - touchStartPos.x);
                 const deltaY = Math.abs(touch.clientY - touchStartPos.y);
@@ -2226,20 +2252,16 @@ Pepe-Dom Team`;
                 // Start dragging if moved more than 10px
                 if (distance > 10 && !isDragging) {
                     isDragging = true;
-                    draggedCard = card;
-                    card.classList.add('dragging');
-                    
-                    // Prevent default to avoid scrolling
+                    cardElement.classList.add('dragging');
                     e.preventDefault();
                 }
                 
-                if (isDragging && draggedCard === card) {
+                if (isDragging) {
                     // Move card with finger
-                    const rect = card.getBoundingClientRect();
                     const offsetX = touch.clientX - touchStartPos.x;
                     const offsetY = touch.clientY - touchStartPos.y;
                     
-                    card.style.transform = `translate(${offsetX}px, ${offsetY}px) rotate(5deg) scale(1.05)`;
+                    cardElement.style.transform = `translate(${offsetX}px, ${offsetY}px) rotate(5deg) scale(1.05)`;
                     
                     // Check which column we're over
                     const columns = document.querySelectorAll('.column');
@@ -2268,13 +2290,10 @@ Pepe-Dom Team`;
                 }
             }, { passive: false });
             
-            // Touch end
-            document.addEventListener('touchend', (e) => {
-                if (window.innerWidth > 768) return; // Only on mobile
-                
+            cardElement.addEventListener('touchend', (e) => {
                 const touchDuration = Date.now() - touchStartTime;
                 
-                if (isDragging && draggedCard) {
+                if (isDragging) {
                     // Find target column
                     const columns = document.querySelectorAll('.column');
                     let targetColumn = null;
@@ -2287,7 +2306,7 @@ Pepe-Dom Team`;
                     
                     if (targetColumn) {
                         const newStatus = targetColumn.dataset.status;
-                        const cardId = parseInt(draggedCard.dataset.cardId) || draggedCard.dataset.cardId;
+                        const cardId = parseInt(cardElement.dataset.cardId) || cardElement.dataset.cardId;
                         
                         // Move card to new status
                         updateCardStatus(cardId, newStatus);
@@ -2297,37 +2316,33 @@ Pepe-Dom Team`;
                     }
                     
                     // Reset visual state
-                    draggedCard.classList.remove('dragging');
-                    draggedCard.style.transform = '';
+                    cardElement.classList.remove('dragging');
+                    cardElement.style.transform = '';
                     
                     columns.forEach(column => {
                         column.classList.remove('drag-over');
                     });
                     
                     isDragging = false;
-                    draggedCard = null;
-                } else if (touchDuration < 200 && !isDragging) {
+                } else if (touchDuration < 200) {
                     // Short tap - open card details
-                    const card = e.target.closest('.card');
-                    if (card && !e.target.closest('.card-actions')) {
-                        const cardId = parseInt(card.dataset.cardId) || card.dataset.cardId;
+                    if (!e.target.closest('.card-actions')) {
+                        const cardId = parseInt(cardElement.dataset.cardId) || cardElement.dataset.cardId;
                         openCardExpanded(cardId);
                     }
                 }
             });
             
-            // Touch cancel
-            document.addEventListener('touchcancel', () => {
-                if (draggedCard) {
-                    draggedCard.classList.remove('dragging');
-                    draggedCard.style.transform = '';
+            cardElement.addEventListener('touchcancel', () => {
+                if (isDragging) {
+                    cardElement.classList.remove('dragging');
+                    cardElement.style.transform = '';
                     
                     document.querySelectorAll('.column').forEach(column => {
                         column.classList.remove('drag-over');
                     });
                     
                     isDragging = false;
-                    draggedCard = null;
                 }
             });
         }
