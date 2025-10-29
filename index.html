@@ -568,8 +568,11 @@
             background: white;
             border-radius: 15px;
             padding: 20px;
-            margin-bottom: 30px;
+            margin-top: 40px;
+            margin-bottom: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-top: 3px solid #10b981;
+            opacity: 0.95;
         }
 
         .completed-goals h2 {
@@ -1082,17 +1085,6 @@
             </div>
         </div>
 
-        <!-- Abgeschlossene Ziele -->
-        <div class="completed-goals" id="completedGoalsSection" style="display: none;">
-            <h2>
-                ✅ Abgeschlossene Ziele
-                <button class="toggle-completed-btn" onclick="toggleCompletedGoals()">📋 Anzeigen</button>
-            </h2>
-            <div class="completed-goals-list" id="completedGoalsList">
-                <!-- Abgeschlossene Ziele werden hier angezeigt -->
-            </div>
-        </div>
-
         <!-- Kanban Board -->
         <div class="kanban-board">
             <div class="column" data-status="todo">
@@ -1125,6 +1117,17 @@
                     <button class="add-card-btn" onclick="openCardModal('done')">+</button>
                 </div>
                 <div class="cards-container" id="done-cards"></div>
+            </div>
+        </div>
+
+        <!-- Abgeschlossene Ziele -->
+        <div class="completed-goals" id="completedGoalsSection" style="display: none;">
+            <h2>
+                ✅ Abgeschlossene Ziele
+                <button class="toggle-completed-btn" onclick="toggleCompletedGoals()">📋 Anzeigen</button>
+            </h2>
+            <div class="completed-goals-list" id="completedGoalsList">
+                <!-- Abgeschlossene Ziele werden hier angezeigt -->
             </div>
         </div>
     </div>
