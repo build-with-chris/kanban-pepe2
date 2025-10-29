@@ -751,6 +751,33 @@
             padding: 2px 8px;
         }
 
+        .card-priority {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.7em;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .priority-high {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 3px solid #dc2626;
+        }
+
+        .priority-medium {
+            background: #fef3c7;
+            color: #92400e;
+            border-left: 3px solid #f59e0b;
+        }
+
+        .priority-low {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 3px solid #10b981;
+        }
+
         .card-actions {
             display: flex;
             gap: 8px;
@@ -1124,6 +1151,15 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="cardPriority">Priorität</label>
+                    <select id="cardPriority" required>
+                        <option value="high">🔴 Hoch</option>
+                        <option value="medium" selected>🟡 Mittel</option>
+                        <option value="low">🟢 Niedrig</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
                     <label>Tags</label>
                     <div class="tag-selector">
                         <div class="tag-option">
@@ -1392,6 +1428,7 @@
                             description: cardData.description,
                             tags: cardData.tags,
                             status: cardData.status,
+                            priority: cardData.priority,
                             updated_at: new Date().toISOString()
                         })
                         .eq('id', cardData.id)
@@ -1407,7 +1444,8 @@
                             title: cardData.title,
                             description: cardData.description,
                             tags: cardData.tags,
-                            status: cardData.status
+                            status: cardData.status,
+                            priority: cardData.priority
                         });
                     
                     if (error) throw error;
@@ -1632,6 +1670,7 @@
             } else {
                 cardData.id = localCardIdCounter++;
                 cardData.created_at = new Date().toISOString();
+                cardData.priority = cardData.priority || 'medium'; // Ensure priority is set
                 localCards.push(cardData);
                 localStorage.setItem('pepeSharedCardIdCounter', localCardIdCounter);
             }
@@ -1908,11 +1947,21 @@
         }
         
         function renderFilteredCards(filteredCards) {
+            // Priority order: high (3), medium (2), low (1)
+            const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+
             ['todo', 'progress', 'review', 'done'].forEach(status => {
                 const container = document.getElementById(`${status}-cards`);
                 container.innerHTML = '';
-                
-                const statusCards = filteredCards.filter(card => card.status === status);
+
+                const statusCards = filteredCards
+                    .filter(card => card.status === status)
+                    .sort((a, b) => {
+                        const priorityA = priorityOrder[a.priority] || 2; // default to medium
+                        const priorityB = priorityOrder[b.priority] || 2; // default to medium
+                        return priorityB - priorityA; // Sort high to low
+                    });
+
                 statusCards.forEach(card => {
                     const cardElement = createCardElement(card);
                     container.appendChild(cardElement);
@@ -1926,10 +1975,23 @@
             cardDiv.draggable = true;
             cardDiv.dataset.cardId = card.id;
             
-            const tagsHtml = (card.tags || []).map(tag => 
+            const priorityText = {
+                'high': 'HOCH',
+                'medium': 'MITTEL',
+                'low': 'NIEDRIG'
+            };
+
+            const priorityIcon = {
+                'high': '🔴',
+                'medium': '🟡',
+                'low': '🟢'
+            };
+
+            const priority = card.priority || 'medium';
+            const tagsHtml = (card.tags || []).map(tag =>
                 `<span class="tag card-tag tag-${tag.toLowerCase()}">${tag}</span>`
             ).join('');
-            
+
             // Mobile vs Desktop actions
             const isMobile = window.innerWidth <= 768;
             const actionsHtml = isMobile ? 
@@ -1947,7 +2009,10 @@
                 </div>`;
             
             cardDiv.innerHTML = `
-                <div class="card-title">${card.title}</div>
+                <div class="card-title">
+                    <span class="card-priority priority-${priority}">${priorityIcon[priority]} ${priorityText[priority]}</span>
+                    ${card.title}
+                </div>
                 ${card.description ? `<div class="card-description">${card.description}</div>` : ''}
                 <div class="card-footer">
                     <div class="card-tags">${tagsHtml}</div>
@@ -2095,7 +2160,8 @@
                     document.getElementById('cardStatus').value = card.status;
                     document.getElementById('cardTitle').value = card.title;
                     document.getElementById('cardDescription').value = card.description || '';
-                    
+                    document.getElementById('cardPriority').value = card.priority || 'medium';
+
                     // Clear all checkboxes first
                     document.querySelectorAll('.tag-selector input[type="checkbox"]').forEach(checkbox => {
                         checkbox.checked = false;
@@ -2110,10 +2176,12 @@
                     console.error('Card not found:', cardId);
                     modalTitle.textContent = 'Neue Karte erstellen';
                     document.getElementById('cardStatus').value = status;
+                    document.getElementById('cardPriority').value = 'medium'; // Set default priority
                 }
             } else {
                 modalTitle.textContent = 'Neue Karte erstellen';
                 document.getElementById('cardStatus').value = status;
+                document.getElementById('cardPriority').value = 'medium'; // Set default priority
             }
             
             modal.classList.add('active');
@@ -2130,17 +2198,19 @@
             const title = document.getElementById('cardTitle').value;
             const description = document.getElementById('cardDescription').value;
             const status = document.getElementById('cardStatus').value;
-            
+            const priority = document.getElementById('cardPriority').value;
+
             const tags = [];
             document.querySelectorAll('.tag-selector input[type="checkbox"]:checked').forEach(checkbox => {
                 tags.push(checkbox.value);
             });
-            
+
             const cardData = {
                 title,
                 description,
                 tags,
-                status
+                status,
+                priority
             };
             
             if (cardId) {
