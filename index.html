@@ -1276,6 +1276,12 @@
                 return;
             }
             
+            // Timeout für Supabase-Verbindung (5 Sekunden)
+            const connectionTimeout = setTimeout(() => {
+                console.warn('⚠️ Supabase-Verbindung zu langsam, nutze localStorage');
+                useFallbackStorage();
+            }, 5000);
+            
             try {
                 supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
                     auth: {
@@ -1284,11 +1290,19 @@
                     }
                 });
                 
-                // Test connection first
-                const { data, error } = await supabase
+                // Test connection first mit Timeout
+                const connectionPromise = supabase
                     .from('shared_cards')
                     .select('count')
                     .limit(1);
+                
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Connection timeout')), 4000)
+                );
+                
+                const { data, error } = await Promise.race([connectionPromise, timeoutPromise]);
+                
+                clearTimeout(connectionTimeout);
                 
                 if (error) {
                     throw error;
@@ -1302,7 +1316,9 @@
                 updateSyncStatus('synced', 'Online - Live Sync');
                 
             } catch (error) {
+                clearTimeout(connectionTimeout);
                 console.error('Supabase init error:', error);
+                console.log('📦 Wechsle zu localStorage Fallback');
                 useFallbackStorage();
             }
         }
@@ -1356,6 +1372,7 @@
         // ========================================
         
         function useFallbackStorage() {
+            console.log('📦 Aktiviere localStorage Fallback');
             updateSyncStatus('offline', 'Lokaler Modus');
             
             // Override database functions with localStorage
@@ -1368,7 +1385,10 @@
             window.toggleGoal = toggleGoalLocal;
             window.updateCardStatus = updateCardStatusLocal;
             
-            loadAllDataLocal();
+            // Nur laden, wenn noch nicht geladen wurde
+            if (allCards.length === 0) {
+                loadAllDataLocal();
+            }
         }
         
         // ========================================
@@ -2497,8 +2517,15 @@ Pepe-Dome Team`;
             // Initialize filters
             initializeFilters();
             
-            // Initialize Supabase or fallback
-            initSupabase();
+            // Lade initial Daten aus localStorage, damit Board sofort angezeigt wird
+            loadAllDataLocal();
+            
+            // Initialize Supabase im Hintergrund (nicht blockierend)
+            // Falls Supabase nicht verfügbar ist, bleibt localStorage aktiv
+            initSupabase().catch(error => {
+                console.error('Supabase initialization failed:', error);
+                // Fallback ist bereits aktiv durch loadAllDataLocal()
+            });
         });
         
         function updateMobileTitle() {
