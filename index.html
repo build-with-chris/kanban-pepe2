@@ -117,6 +117,17 @@
             max-width: 900px;
             padding: 40px;
             animation: fadeInUp 1s ease-out;
+            cursor: pointer;
+        }
+
+        .vision-content::after {
+            content: "Klicken zum Überspringen";
+            display: block;
+            margin-top: 30px;
+            font-size: 0.9em;
+            opacity: 0.7;
+            animation: fadeInSentence 1s ease-out forwards;
+            animation-delay: 3s;
         }
 
         @keyframes fadeInUp {
@@ -2106,21 +2117,42 @@
             textSpan.textContent = text;
         }
         
+        function hideVisionScreen() {
+            const visionScreen = document.getElementById('visionScreen');
+            const appContainer = document.getElementById('appContainer');
+            
+            // Fade out animation
+            visionScreen.classList.add('hidden');
+            setTimeout(() => {
+                visionScreen.style.display = 'none';
+                appContainer.classList.add('visible');
+                // Ensure app container is visible
+                appContainer.style.display = 'block';
+            }, 1000);
+        }
+        
         function showVisionScreen() {
             const visionScreen = document.getElementById('visionScreen');
             const appContainer = document.getElementById('appContainer');
             
-            // Start countdown at 5 seconds
-            let count = 5;
+            // Make sure vision screen is visible
+            visionScreen.style.display = 'flex';
+            visionScreen.classList.remove('hidden');
             
-            // Fade out after 5 seconds
+            // Make sure app container is hidden initially
+            appContainer.style.display = 'none';
+            appContainer.classList.remove('visible');
+            
+            // Add click handler to skip
+            const visionContent = document.querySelector('.vision-content');
+            if (visionContent) {
+                visionContent.addEventListener('click', hideVisionScreen, { once: true });
+            }
+            
+            // Auto-hide after 5 seconds
             setTimeout(() => {
-                visionScreen.classList.add('hidden');
-                setTimeout(() => {
-                    visionScreen.style.display = 'none';
-                    appContainer.classList.add('visible');
-                }, 1000);
-            }, count * 1000);
+                hideVisionScreen();
+            }, 5000);
         }
         
         function addWeekGoal() {
