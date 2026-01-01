@@ -104,11 +104,12 @@
             align-items: center;
             z-index: 10000;
             transition: opacity 1s ease-out;
+            cursor: pointer;
         }
 
         .vision-screen.hidden {
-            opacity: 0;
-            pointer-events: none;
+            opacity: 0 !important;
+            pointer-events: none !important;
         }
 
         .vision-content {
@@ -1261,7 +1262,7 @@
         const SHARED_WORKSPACE_ID = 'pepe-dom-shared';
         
         // Initialisiere Supabase Client
-        let supabase;
+        let supabaseClient;
         let realtimeChannel;
         
         // ========================================
@@ -1283,7 +1284,7 @@
             }, 5000);
             
             try {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
                     auth: {
                         persistSession: false,
                         autoRefreshToken: false
@@ -1291,7 +1292,7 @@
                 });
                 
                 // Test connection first mit Timeout
-                const connectionPromise = supabase
+                const connectionPromise = supabaseClient
                     .from('shared_cards')
                     .select('count')
                     .limit(1);
@@ -1328,10 +1329,10 @@
         // ========================================
         
         function setupRealtimeSubscriptions() {
-            if (!supabase) return;
+            if (!supabaseClient) return;
             
             // Subscribe to changes in cards
-            realtimeChannel = supabase
+            realtimeChannel = supabaseClient
                 .channel('shared-workspace')
                 .on('postgres_changes', {
                     event: '*',
@@ -1405,10 +1406,10 @@
         }
         
         async function loadCards() {
-            if (!supabase) return loadCardsLocal();
+            if (!supabaseClient) return loadCardsLocal();
             
             try {
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('shared_cards')
                     .select('*')
                     .eq('workspace_id', SHARED_WORKSPACE_ID)
@@ -1424,14 +1425,14 @@
         }
         
         async function saveCard(cardData) {
-            if (!supabase) return saveCardLocal(cardData);
+            if (!supabaseClient) return saveCardLocal(cardData);
             
             updateSyncStatus('syncing', 'Speichere...');
             
             try {
                 if (cardData.id) {
                     // Update existing card
-                    const { error } = await supabase
+                    const { error } = await supabaseClient
                         .from('shared_cards')
                         .update({
                             title: cardData.title,
@@ -1447,7 +1448,7 @@
                     if (error) throw error;
                 } else {
                     // Create new card
-                    const { error } = await supabase
+                    const { error } = await supabaseClient
                         .from('shared_cards')
                         .insert({
                             workspace_id: SHARED_WORKSPACE_ID,
@@ -1470,14 +1471,14 @@
         }
         
         async function deleteCard(cardId) {
-            if (!supabase) return deleteCardLocal(cardId);
+            if (!supabaseClient) return deleteCardLocal(cardId);
             
             if (!confirm('Möchten Sie diese Karte wirklich löschen?')) return;
             
             updateSyncStatus('syncing', 'Lösche...');
             
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('shared_cards')
                     .delete()
                     .eq('id', cardId)
@@ -1494,12 +1495,12 @@
         }
         
         async function updateCardStatus(cardId, newStatus) {
-            if (!supabase) return updateCardStatusLocal(cardId, newStatus);
+            if (!supabaseClient) return updateCardStatusLocal(cardId, newStatus);
             
             updateSyncStatus('syncing', 'Verschiebe...');
             
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('shared_cards')
                     .update({ 
                         status: newStatus,
@@ -1519,10 +1520,10 @@
         }
         
         async function loadWeekGoals() {
-            if (!supabase) return loadWeekGoalsLocal();
+            if (!supabaseClient) return loadWeekGoalsLocal();
             
             try {
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('shared_goals')
                     .select('*')
                     .eq('workspace_id', SHARED_WORKSPACE_ID)
@@ -1538,13 +1539,13 @@
         }
         
         async function saveWeekGoal(goalText, author = 'Unbekannt') {
-            if (!supabase) return saveWeekGoalLocal(goalText, author);
+            if (!supabaseClient) return saveWeekGoalLocal(goalText, author);
             
             updateSyncStatus('syncing', 'Speichere Ziel...');
             
             try {
                 // Try with author field first
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('shared_goals')
                     .insert({
                         workspace_id: SHARED_WORKSPACE_ID,
@@ -1557,7 +1558,7 @@
                     // If author field doesn't exist, try without it
                     if (error.message.includes('author') || error.message.includes('column')) {
                         console.warn('Author column not found, saving without author field');
-                        const { error: fallbackError } = await supabase
+                        const { error: fallbackError } = await supabaseClient
                             .from('shared_goals')
                             .insert({
                                 workspace_id: SHARED_WORKSPACE_ID,
@@ -1580,13 +1581,13 @@
         }
         
         async function toggleGoal(goalId) {
-            if (!supabase) return toggleGoalLocal(goalId);
+            if (!supabaseClient) return toggleGoalLocal(goalId);
             
             updateSyncStatus('syncing', 'Aktualisiere...');
             
             try {
                 // First get current state
-                const { data: goal } = await supabase
+                const { data: goal } = await supabaseClient
                     .from('shared_goals')
                     .select('completed')
                     .eq('id', goalId)
@@ -1602,7 +1603,7 @@
                 }
                 
                 // Toggle it
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('shared_goals')
                     .update(updateData)
                     .eq('id', goalId)
@@ -1612,7 +1613,7 @@
                     // If completed_at field doesn't exist, try without it
                     if (error.message.includes('completed_at') || error.message.includes('column')) {
                         console.warn('completed_at column not found, updating without it');
-                        const { error: fallbackError } = await supabase
+                        const { error: fallbackError } = await supabaseClient
                             .from('shared_goals')
                             .update({ completed: !goal.completed })
                             .eq('id', goalId)
@@ -1633,12 +1634,12 @@
         }
         
         async function deleteGoal(goalId) {
-            if (!supabase) return deleteGoalLocal(goalId);
+            if (!supabaseClient) return deleteGoalLocal(goalId);
             
             updateSyncStatus('syncing', 'Lösche Ziel...');
             
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('shared_goals')
                     .delete()
                     .eq('id', goalId)
@@ -1772,11 +1773,11 @@
             console.log('📱 Mobile Debug - Current state:');
             console.log('- Active filters:', activeFilters);
             console.log('- All cards:', allCards.length);
-            console.log('- Supabase connected:', !!supabase);
+            console.log('- Supabase connected:', !!supabaseClient);
             console.log('- Sync status:', document.getElementById('syncStatus').className);
             
             // Force reload cards
-            if (supabase) {
+            if (supabaseClient) {
                 console.log('📱 Mobile Debug - Forcing card reload...');
                 loadCards();
             }
@@ -2138,41 +2139,93 @@
         }
         
         function hideVisionScreen() {
+            console.log('🎬 Verstecke Vision Screen');
             const visionScreen = document.getElementById('visionScreen');
             const appContainer = document.getElementById('appContainer');
             
-            // Fade out animation
+            if (!visionScreen || !appContainer) {
+                console.error('❌ Vision Screen oder App Container nicht gefunden!');
+                // Versuche es trotzdem - vielleicht sind die IDs anders
+                const vs = document.querySelector('.vision-screen');
+                const ac = document.querySelector('.app-container');
+                if (vs) vs.style.display = 'none';
+                if (ac) {
+                    ac.style.display = 'block';
+                    ac.classList.add('visible');
+                }
+                return;
+            }
+            
+            // Sofort verstecken (keine Animation, um sicherzustellen, dass es funktioniert)
+            visionScreen.style.display = 'none';
+            visionScreen.style.opacity = '0';
+            visionScreen.style.pointerEvents = 'none';
             visionScreen.classList.add('hidden');
-            setTimeout(() => {
-                visionScreen.style.display = 'none';
-                appContainer.classList.add('visible');
-                // Ensure app container is visible
-                appContainer.style.display = 'block';
-            }, 1000);
+            
+            // Sofort Board anzeigen
+            appContainer.style.display = 'block';
+            appContainer.style.opacity = '1';
+            appContainer.style.visibility = 'visible';
+            appContainer.classList.add('visible');
+            
+            console.log('✅ Kanban Board sollte jetzt sichtbar sein');
+            console.log('Vision Screen display:', visionScreen.style.display);
+            console.log('App Container display:', appContainer.style.display);
         }
         
         function showVisionScreen() {
+            console.log('🎬 Zeige Vision Screen');
             const visionScreen = document.getElementById('visionScreen');
             const appContainer = document.getElementById('appContainer');
             
+            if (!visionScreen || !appContainer) {
+                console.error('❌ Vision Screen oder App Container nicht gefunden!');
+                console.log('Vision Screen:', visionScreen);
+                console.log('App Container:', appContainer);
+                // Fallback: Zeige Board direkt
+                if (appContainer) {
+                    appContainer.style.display = 'block';
+                    appContainer.classList.add('visible');
+                }
+                return;
+            }
+            
             // Make sure vision screen is visible
             visionScreen.style.display = 'flex';
+            visionScreen.style.opacity = '1';
+            visionScreen.style.pointerEvents = 'auto';
+            visionScreen.style.visibility = 'visible';
             visionScreen.classList.remove('hidden');
             
             // Make sure app container is hidden initially
             appContainer.style.display = 'none';
+            appContainer.style.opacity = '0';
+            appContainer.style.visibility = 'hidden';
             appContainer.classList.remove('visible');
             
-            // Add click handler to skip
+            // Add click handler to entire vision screen (not just content)
+            const clickHandler = (e) => {
+                console.log('👆 Vision Screen geklickt - überspringe');
+                e.preventDefault();
+                e.stopPropagation();
+                hideVisionScreen();
+            };
+            
+            // Remove any existing listeners first and add new one
+            visionScreen.onclick = clickHandler;
+            
+            // Also add to content for better UX
             const visionContent = document.querySelector('.vision-content');
             if (visionContent) {
-                visionContent.addEventListener('click', hideVisionScreen, { once: true });
+                visionContent.style.cursor = 'pointer';
+                visionContent.onclick = clickHandler;
             }
             
-            // Auto-hide after 5 seconds
+            // Auto-hide after 3 seconds (reduziert von 5)
             setTimeout(() => {
+                console.log('⏰ 3 Sekunden abgelaufen - verstecke Vision Screen automatisch');
                 hideVisionScreen();
-            }, 5000);
+            }, 3000);
         }
         
         function addWeekGoal() {
@@ -2494,8 +2547,69 @@ Pepe-Dome Team`;
         // INITIALIZATION
         // ========================================
         
+        // Direkter Bypass für Dev-Mode - kann in der Konsole aufgerufen werden
+        function skipVisionScreen() {
+            console.log('🚀 Überspringe Vision Screen manuell');
+            hideVisionScreen();
+        }
+        
+        // Globale Funktion sofort verfügbar machen
+        window.skipVisionScreen = skipVisionScreen;
+        window.hideVisionScreen = hideVisionScreen;
+        
         document.addEventListener('DOMContentLoaded', () => {
-            showVisionScreen();
+            console.log('🚀 DOM geladen - starte Initialisierung');
+            console.log('💡 Tipp: Rufe skipVisionScreen() in der Konsole auf, um den Vision Screen zu überspringen');
+            console.log('💡 Oder füge ?skipVision=true zur URL hinzu');
+            
+            // Prüfe URL-Parameter für Dev-Mode
+            const urlParams = new URLSearchParams(window.location.search);
+            const skipVision = urlParams.get('skipVision') === 'true' || urlParams.get('skip') === 'true';
+            
+            if (skipVision) {
+                console.log('⏭️ Vision Screen wird übersprungen (URL-Parameter)');
+                const visionScreen = document.getElementById('visionScreen');
+                const appContainer = document.getElementById('appContainer');
+                if (visionScreen) visionScreen.style.display = 'none';
+                if (appContainer) {
+                    appContainer.style.display = 'block';
+                    appContainer.classList.add('visible');
+                }
+                // Initialisiere Rest der App
+                setupDragAndDrop();
+                setupMobileCardInteractions();
+                updateMobileTitle();
+                document.getElementById('cardForm').addEventListener('submit', handleCardSubmit);
+                document.getElementById('emailForm').addEventListener('submit', sendEmail);
+                document.querySelectorAll('.filter-tag input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.addEventListener('change', (e) => {
+                        const tag = e.target.closest('.filter-tag').dataset.tag;
+                        toggleFilter(tag);
+                    });
+                });
+                initializeFilters();
+                loadAllDataLocal();
+                initSupabase().catch(error => {
+                    console.error('Supabase initialization failed:', error);
+                });
+                return; // Früh beenden, Vision Screen wird nicht angezeigt
+            }
+            
+            // Zeige Vision Screen
+            try {
+                showVisionScreen();
+            } catch (error) {
+                console.error('❌ Fehler beim Anzeigen des Vision Screens:', error);
+                // Fallback: Zeige Board direkt an
+                const visionScreen = document.getElementById('visionScreen');
+                const appContainer = document.getElementById('appContainer');
+                if (visionScreen) visionScreen.style.display = 'none';
+                if (appContainer) {
+                    appContainer.style.display = 'block';
+                    appContainer.classList.add('visible');
+                }
+            }
+            
             setupDragAndDrop();
             setupMobileCardInteractions();
             
@@ -2538,6 +2652,20 @@ Pepe-Dome Team`;
         
         // Update title on window resize
         window.addEventListener('resize', updateMobileTitle);
+        
+        // Globale Funktionen für Debugging
+        window.showVisionScreen = showVisionScreen;
+        
+        // Fallback: Wenn nach 4 Sekunden das Board noch nicht sichtbar ist, zeige es manuell
+        setTimeout(() => {
+            const visionScreen = document.getElementById('visionScreen');
+            const appContainer = document.getElementById('appContainer');
+            
+            if (visionScreen && window.getComputedStyle(visionScreen).display !== 'none') {
+                console.warn('⚠️ Vision Screen noch sichtbar nach 4 Sekunden - zeige Board manuell');
+                hideVisionScreen();
+            }
+        }, 4000);
     </script>
 </body>
 </html>
